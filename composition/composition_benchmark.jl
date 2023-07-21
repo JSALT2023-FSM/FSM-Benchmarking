@@ -151,7 +151,8 @@ function compose_check_and_bench(A, B, C, preprocess_fn, compose_fn; postprocess
 end
 
 preprocess_CooOfCoo(A) = vectorFst2COOofCOOFst(A)
-compose_CooOfCoo(A, B) = COOofCOO_compose(A, B)  
+compose_CooOfCoo(A, B) = COOofCOO_compose(A, B, "cscsum_alloc")
+compose_CooOfCooMT(A, B) = COOofCOO_compose(A, B "cscsum_mt")
 postprocess_CooOfCoo(C) = TF.VectorFST(coo_lod2arcs(C["coo"], C["Q"], C["S"]), 1, C["finalweights"])
 
 preprocess_tensorfst(A) = convert(TF.TensorFST{S}, TF.VectorFST(A))
@@ -215,6 +216,12 @@ for i in ProgressBar(1:size(df,1))
         times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, preprocess_CooOfCoo, compose_CooOfCoo; postprocess_fn=postprocess_CooOfCoo)   
         push!(results,named_tuple_maker(r, times,  "CooOfCoo", D_nstates, D_narcs, F_nstates, F_narcs, equivalence))
     end
+
+    if mode=="CooOfCooMT"
+        times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, preprocess_CooOfCoo, compose_CooOfCooMT; postprocess_fn=postprocess_CooOfCoo)   
+        push!(results,named_tuple_maker(r, times,  "CooOfCoo", D_nstates, D_narcs, F_nstates, F_narcs, equivalence))
+    end
+
 
     if mode=="TensorFSTs"
         times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, preprocess_tensorfst, compose_tensorfst)
