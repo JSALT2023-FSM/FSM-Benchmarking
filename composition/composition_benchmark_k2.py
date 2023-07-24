@@ -32,59 +32,64 @@ def ofstnumarcs(fsa):
 print("Loading data...")
 
 
-df = pd.read_csv(f"{dbname}.csv")
+def main():
+    df = pd.read_csv(f"{dbname}.csv")
 
-results = []
-output = f"{dbname}_k2_compbenchs.csv"
-if Path(output).exists():
-    print("Loading previous results...")
-    df_doned = pd.read_csv(output)
-    results += df_doned.to_dict(orient="records")
-else:
-    df_doned = None
+    results = []
+    output = f"{dbname}_k2_compbenchs.csv"
+    if Path(output).exists():
+        print("Loading previous results...")
+        df_doned = pd.read_csv(output)
+        results += df_doned.to_dict(orient="records")
+    else:
+        df_doned = None
 
-for i in tqdm(range(len(df))):
-    r = df.iloc[i]
-    if df_doned is not None and r["fileC"] in df_doned["fileC"].values:
-        print("Skipping ",r["fileC"])
-        continue
-    try:
-        A = txtpath2k2fsa(Path(r["fileA"]).with_suffix(".txt"))
-    except:
-        print("Error reading ",r["fileA"])
-        continue
-    
-    try:
-        B = txtpath2k2fsa(Path(r["fileB"]).with_suffix(".txt"))
-    except:
-        print("Error reading ",r["fileB"])
-        continue
+    for i in tqdm(range(len(df))):
+        r = df.iloc[i]
+        if df_doned is not None and r["fileC"] in df_doned["fileC"].values:
+            print("Skipping ",r["fileC"])
+            continue
+        try:
+            A = txtpath2k2fsa(Path(r["fileA"]).with_suffix(".txt"))
+        except:
+            print("Error reading ",r["fileA"])
+            continue
+        
+        try:
+            B = txtpath2k2fsa(Path(r["fileB"]).with_suffix(".txt"))
+        except:
+            print("Error reading ",r["fileB"])
+            continue
 
-    if int(r["narcs"])>500000:
-        print("Skipping ",r["fileC"])
-        continue
+        if int(r["narcs"])>500000:
+            print("Skipping ",r["fileC"])
+            continue
 
-    A = k2.arc_sort(A)
-    B = k2.arc_sort(B)
+        A = k2.arc_sort(A)
+        B = k2.arc_sort(B)
 
-    C = k2.compose(A,B)
-    oC = k2_to_openfst(C)
-    num_states= oC.num_states
-    num_arcs = ofstnumarcs(oC)
-    kaldifst.connect(oC)
-    num_arcs_conn = ofstnumarcs(oC)
-    num_states_conn = oC.num_states
+        C = k2.compose(A,B)
+        oC = k2_to_openfst(C)
+        num_states= oC.num_states
+        num_arcs = ofstnumarcs(oC)
+        kaldifst.connect(oC)
+        num_arcs_conn = ofstnumarcs(oC)
+        num_states_conn = oC.num_states
 
-    times = timeit.repeat("k2.compose(A,B)", globals=locals(), number=1,repeat=repetitions)
+        times = timeit.repeat("k2.compose(A,B)", globals=locals(), number=1,repeat=repetitions)
 
-    results.append({"fileA":r["fileA"],
-                    "fileB":r["fileB"],
-                    "fileC":r["fileC"],
-                    "mean":np.mean(times),"std":np.std(times),"min":np.min(times),"max":np.max(times), 
-                    "nstates": num_states,
-                    "narcs": num_arcs,
-                    "conn_nstates": num_states_conn,
-                    "conn_narcs":   num_arcs_conn
-                    })
+        results.append({"fileA":r["fileA"],
+                        "fileB":r["fileB"],
+                        "fileC":r["fileC"],
+                        "mean":np.mean(times),"std":np.std(times),"min":np.min(times),"max":np.max(times), 
+                        "nstates": num_states,
+                        "narcs": num_arcs,
+                        "conn_nstates": num_states_conn,
+                        "conn_narcs":   num_arcs_conn
+                        })
 
-    pd.DataFrame(results).to_csv(output,index=False)
+        pd.DataFrame(results).to_csv(output,index=False)
+
+
+if __name__ == '__main__':
+    fire.Fire(main)

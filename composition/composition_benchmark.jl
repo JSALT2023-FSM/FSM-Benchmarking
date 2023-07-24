@@ -150,9 +150,10 @@ function compose_check_and_bench(A, B, C, preprocess_fn, compose_fn; postprocess
     times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence
 end
 
-preprocess_CooOfCoo(A) = vectorFst2COOofCOOFst(A)
+preprocess_CooOfCoo(A) = vectorFst2COOofCOOFst(TF.VectorFST(A))
 compose_CooOfCoo(A, B) = COOofCOO_compose(A, B, "cscsum_alloc")
-compose_CooOfCooMT(A, B) = COOofCOO_compose(A, B "cscsum_mt")
+compose_CscOfCoo(A, B) = COOofCOO_compose(A, B, "cscsum_cscmul")
+compose_CooOfCooMT(A, B) = COOofCOO_compose(A, B, "cscsum_mt")
 postprocess_CooOfCoo(C) = TF.VectorFST(coo_lod2arcs(C["coo"], C["Q"], C["S"]), 1, C["finalweights"])
 
 preprocess_tensorfst(A) = convert(TF.TensorFST{S}, TF.VectorFST(A))
@@ -183,23 +184,31 @@ outputname = "$(dbname)_$(mode)_compbenchs.csv"
 
 if isfile(outputname)
     dfpre = CSV.read(outputname, DataFrame)
+    #DataFrame to list of named tuples
+    # results = [named_tuple_maker(r, r["times"], r["name"], r["nstates"], r["narcs"], r["conn_nstates"], r["conn_narcs"], r["equivalence"]) for r in eachrow(dfpre)]
 else
     dfpre = nothing
 end
 
 results = []
+
 for i in ProgressBar(1:size(df,1))
 # for i in ProgressBar(1:10)
     r = df[i,:]
+
+    if !isfile(r["fileA"]) || !isfile(r["fileB"]) || !isfile(String(r["fileC"]))
+        continue
+    end
+
     A = OF.read(r["fileA"])
     B = OF.read(r["fileB"])
     C = OF.read(String(r["fileC"]))
 
     # check dfpre is not nothing and if the composition has already been done
 
-    if dfpre!==nothing && String(r["fileC"]) in dfpre[!,"fileC"]
-        continue
-    end
+    # if dfpre!==nothing && String(r["fileC"]) in dfpre[!,"fileC"]
+    #     continue
+    # end
     
     # @show OF.numstates(A), OF.numstates(B), OF.numstates(C), OF.numarcs(A), OF.numarcs(B), OF.numarcs(C)
 
@@ -219,7 +228,12 @@ for i in ProgressBar(1:size(df,1))
 
     if mode=="CooOfCooMT"
         times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, preprocess_CooOfCoo, compose_CooOfCooMT; postprocess_fn=postprocess_CooOfCoo)   
-        push!(results,named_tuple_maker(r, times,  "CooOfCoo", D_nstates, D_narcs, F_nstates, F_narcs, equivalence))
+        push!(results,named_tuple_maker(r, times,  "CooOfCooMT", D_nstates, D_narcs, F_nstates, F_narcs, equivalence))
+    end
+
+    if mode=="CscOfCoo"
+        times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, preprocess_CooOfCoo, compose_CscOfCoo; postprocess_fn=postprocess_CooOfCoo)   
+        push!(results,named_tuple_maker(r, times,  "CscOfCoo", D_nstates, D_narcs, F_nstates, F_narcs, equivalence))
     end
 
 

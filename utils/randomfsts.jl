@@ -7,13 +7,13 @@
 TBW
 """
 function random_vectorfst(S::Type{<:TensorFSTs.Semiring}, nstates, nisyms, narcs; 
-										unweigthed=false, label_offset=1, nosyms=nothing, acceptor=false,
+										unweigthed=false, acyclic=false, label_offset=1, nosyms=nothing, acceptor=false,
                                         seed=1234)
 	if nosyms === nothing
 		nosyms = nisyms
 	end
 
-	arcs, weights = random_arcs(S, nstates, nisyms, narcs; unweigthed=unweigthed, nosyms=nosyms, 
+	arcs, weights = random_arcs(S, nstates, nisyms, narcs; unweigthed=unweigthed, acyclic=acyclic, nosyms=nosyms, 
                                 label_offset=label_offset, acceptor=acceptor, seed=seed)
 	
 	A = TensorFSTs.Arc{S}
@@ -35,7 +35,7 @@ function random_vectorfst(S::Type{<:TensorFSTs.Semiring}, nstates, nisyms, narcs
     VectorFST(tarcs, 1, final)
 end
 
-function random_arcs(S::Type{<:TensorFSTs.Semiring}, nstates, nisyms, narcs; unweigthed=false,
+function random_arcs(S::Type{<:TensorFSTs.Semiring}, nstates, nisyms, narcs; unweigthed=false, acyclic=false,
                         label_offset=1, nosyms=nothing, acceptor=false, seed=1234)
 
 	if nosyms === nothing
@@ -60,10 +60,32 @@ function random_arcs(S::Type{<:TensorFSTs.Semiring}, nstates, nisyms, narcs; unw
 		cis = CartesianIndices((nstates,nstates,(nisyms-label_offset+1),(nosyms-label_offset+1)))
 	end
 
+
+	if acyclic
+		new_cis = []
+		for c in cis
+			if c[1]<c[2]
+				push!(new_cis,c)
+			end
+		end
+		cis = new_cis
+
+		if acceptor
+			total_arcs = floor(Int,(nstates^2-nstates)/2*(nisyms-label_offset+1))
+			if narcs > total_arcs
+				throw(ArgumentError("Number of arcs must be less than nstates(nstates-1)/2 nsyms, $(narcs) > $(total_arcs)"))
+			end
+		else
+			total_arcs = floor(Int,(nstates^2-nstates)/2*(nisyms-label_offset+1)*(nosyms-label_offset+1))
+			if narcs > total_arcs
+				throw(ArgumentError("Number of arcs must be less than  nstates(nstates-1)/2 nisyms nosyms, $(narcs) > $(total_arcs) "))
+			end
+		end
+	end
+
 	shuffled_arcs = shuffle(1:total_arcs)
 
 	for arc_ix in shuffled_arcs[1:narcs]
-
 		if acceptor
 			ss,ds,il = Tuple(cis[arc_ix])
 			ol = il
