@@ -4,7 +4,7 @@ Creates a CSV file with the metadata of the composition (nstates and narcs).
 """
 
 # Directory to look for FSTs in binary format
-dbname = "fsadb_uw"
+dbname = ARGS[1]
 total_composition = 4000
 minarcs = 12
 maxarcs = 50000

@@ -170,7 +170,7 @@ function named_tuple_maker(r, times, name, nstates, narcs, conn_nstates, conn_na
     )
 end
 
-dbname = "fsadb_uw"
+dbname = ARGS[1]
 dbname_composed = dbname * "_composed"
 
 df = CSV.read("$(dbname_composed).csv", DataFrame)
@@ -178,7 +178,7 @@ df = df[df.nstates.>0,:]
 
 
 # lk = ReentrantLock()
-mode = ARGS[1]
+mode = ARGS[2]
 
 outputname = "$(dbname)_$(mode)_compbenchs.csv"
 
