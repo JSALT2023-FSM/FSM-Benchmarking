@@ -3,7 +3,7 @@
 ## Generating Random FSTs
 
 Open utils/ramdomfstdb.jl and change the variables on top to design the type of randomfsts to be generated
-(TODO: create command line arguments). The run the command and it will generate a folder with machines in binary format and a csv with some information.
+(TODO: create command line arguments). The run the command and it will generate a folder in data/fsadb_name with machines in binary format and a csv with some information.
 
 ```
 julia utils/ramdomfstdb.jl

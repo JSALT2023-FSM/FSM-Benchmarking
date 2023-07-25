@@ -12,7 +12,7 @@ julia  --project=$JULIAPROJPATH  composition/composition_benchmark.jl $FSADBPATH
 # K2
 
 OMP_NUM_THREADS=1 python composition/composition_benchmark_k2.py
-cp fsadb_uw_composed_k2_compbenchs.csv fsadb_uw_composed_k2_compbenchs_th1.csv
+mv fsadb_uw_composed_k2_compbenchs.csv data/fsadb_uw_composed_k2_compbenchs_th1.csv
 
 OMP_NUM_THREADS=4 python composition/composition_benchmark_k2.py
-cp fsadb_uw_composed_k2_compbenchs.csv fsadb_uw_composed_k2_compbenchs_th4.csv
+mv fsadb_uw_composed_k2_compbenchs.csv data/fsadb_uw_composed_k2_compbenchs_th4.csv

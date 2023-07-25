@@ -23,13 +23,13 @@ OF=OpenFst
 TF=TensorFSTs
 SR=TF.Semirings
 
-dbname_composed = dbname * "_composed"
+dbname_composed = "data/" * dbname * "_composed"
 
 if !isdir(dbname_composed)
     mkdir(dbname_composed)
 end
 
-root, dirs, file = first(walkdir(dbname))
+root, dirs, file = first(walkdir("data/" * dbname))
 
 # Filter out FSTs with less than minarcs and more than maxarcs
 narcs = map(x->parse(Int,split(split(x,"-")[2],"_")[2]),file)
@@ -69,6 +69,6 @@ Threads.@threads for i in ProgressBar(1:total_composition)
         else
             push!(results, (fileA=f1, fileB=f2, fileC="",  nstates=nstates, narcs=narcs) )
         end    
-        CSV.write("$(dbname_composed).csv", DataFrame(results))
+        CSV.write("data/$(dbname_composed).csv", DataFrame(results))
     end    
 end

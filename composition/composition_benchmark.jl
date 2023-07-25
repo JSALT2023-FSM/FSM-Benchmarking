@@ -108,7 +108,6 @@ function compose_check_and_bench(A, B, C, preprocess_fn, compose_fn; postprocess
 
     # println("Convert...\t")
     if isa(D, OF.VectorFst)
-        # D = OF.VectorFst(D)
         D_nstates = OF.numstates(D)
         D_narcs = OF.numarcs(D)
         F_nstates = NaN
@@ -125,27 +124,21 @@ function compose_check_and_bench(A, B, C, preprocess_fn, compose_fn; postprocess
         F_narcs = NaN
     end
     
-    # println("nstates...\t")
-    # D_nstates = OF.numstates(D)
+    # check equivalence only if the number of states is small
+    if D_nstates<100
+        if isa(D, TF.VectorFST) || isa(D, TF.TensorFST)
+            F = OF.connect(OF.VectorFst(D))
+            F_nstates = OF.numstates(F)
+            F_narcs = OF.numarcs(F)
+        end
+        print("Checking equivalence...\t")
+        equivalence = OF.equivalent(OF.determinize(F), OF.determinize(C))
+    else
+        equivalence = NaN
+    end
 
-    # println("narcs...\t")
-    # D_narcs = OF.numarcs(D)
-
-    # println("Connect...\t")
-    # F = OF.connect(D)
-    # F_nstates = OF.numstates(F)
-    # F_narcs = OF.numarcs(F)
-
-    # println("Connect...\t")
-    # C = OF.connect(C)
-
-
-    # print("Benchmarking...\t")
+    print("Benchmarking...\t")
     times = bench(A, B, compose_fn)
-
-    # print("Checking equivalence...\t")    
-    # equivalence = OF.equivalent(OF.determinize(C), OF.determinize(F))
-    equivalence = NaN
 
     times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence
 end
@@ -171,16 +164,18 @@ function named_tuple_maker(r, times, name, nstates, narcs, conn_nstates, conn_na
 end
 
 dbname = ARGS[1]
-dbname_composed = dbname * "_composed"
+dbname_composed = "data/$(dbname)_composed.csv"
+@show dbname_composed 
 
-df = CSV.read("$(dbname_composed).csv", DataFrame)
+df = CSV.read(dbname_composed, DataFrame)
 df = df[df.nstates.>0,:]
-
 
 # lk = ReentrantLock()
 mode = ARGS[2]
+@show mode 
 
-outputname = "$(dbname)_$(mode)_compbenchs.csv"
+outputname = "data/$(dbname)_$(mode)_compbenchs.csv"
+@show outputname
 
 if isfile(outputname)
     dfpre = CSV.read(outputname, DataFrame)
@@ -196,7 +191,8 @@ for i in ProgressBar(1:size(df,1))
 # for i in ProgressBar(1:10)
     r = df[i,:]
 
-    if !isfile(r["fileA"]) || !isfile(r["fileB"]) || !isfile(String(r["fileC"]))
+    if !isfile(strip(r["fileA"])) || !isfile(strip(r["fileB"])) || !isfile(strip(String(r["fileC"])))
+        println("File not found ", r["fileA"]," ", r["fileB"]," ", r["fileC"])
         continue
     end
 
@@ -212,9 +208,9 @@ for i in ProgressBar(1:size(df,1))
     
     # @show OF.numstates(A), OF.numstates(B), OF.numstates(C), OF.numarcs(A), OF.numarcs(B), OF.numarcs(C)
 
-    if OF.numarcs(C)>500000
-        continue
-    end
+    # if OF.numarcs(C)>500000
+    #     continue
+    # end
 
     if mode=="OpenFst"
         times, D_nstates, D_narcs, F_nstates, F_narcs, equivalence = compose_check_and_bench(A, B, C, identity, compose_openfst)

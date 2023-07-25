@@ -103,8 +103,8 @@ elseif semiring == "prob"
     S = SR.ProbabilitySemiring{Float32}
 end
 
-if !isdir(dbname)
-    mkdir(dbname)
+if !isdir("data/"*dbname)
+    mkdir("data/"*dbname)
 end
 
 lk = ReentrantLock()
@@ -128,10 +128,10 @@ Threads.@threads for i in ProgressBar(1:total_fsts)
     rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor)    
     A = OF.VectorFst(rA)
     num = i
-    filename = "$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
+    filename = "data/$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
     lock(lk) do
         OF.write(A, filename)
-        push!(records, (nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
+        push!(records, (filename=filename,nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
     end 
 end
 
@@ -153,11 +153,11 @@ Threads.@threads for i in ProgressBar(1:length(products))
     rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor)
     A = OF.VectorFst(rA)
     num = i + total_fsts
-    filename = "$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
+    filename = "data/$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
     lock(lk) do
         OF.write(A, filename)
         push!(records, (filename=filename, nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
     end
 end
 
-CSV.write("$(dbname).csv", DataFrame(records))
+CSV.write("data/$(dbname).csv", DataFrame(records))
