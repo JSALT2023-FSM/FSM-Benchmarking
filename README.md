@@ -24,3 +24,17 @@ For running the benchmarks, open the script runcompbench.sh and change the path 
 ```
 runcompbench.sh
 ```
+
+### Benchmark real example of utterance composed with phone LM
+
+```
+fstcompose ashrafsamplesent.noeps.fst voxpopuli_ipatranscription.5.fst comp.fst
+```
+
+Links:
+
+[utterance dense fst](https://www.dropbox.com/s/ni65bktfcs7y4iw/ashrafsamplesent.noeps.fst?dl=0)
+
+[phone lm](https://www.dropbox.com/s/dzvq869dr63r5j5/voxpopuli_ipatranscription.5.fst?dl=0)
+
+[results](https://www.dropbox.com/s/e1j6bgtg0nyj5im/comp.fst?dl=0)
