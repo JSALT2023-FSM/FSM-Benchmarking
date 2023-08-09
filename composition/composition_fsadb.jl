@@ -5,9 +5,9 @@ Creates a CSV file with the metadata of the composition (nstates and narcs).
 
 # Directory to look for FSTs in binary format
 dbname = ARGS[1]
-total_composition = 4000
+total_composition = 1000
 minarcs = 12
-maxarcs = 50000
+maxarcs = 500000
 
 using DataFrames
 import IterTools.product
@@ -33,7 +33,7 @@ root, dirs, file = first(walkdir("data/" * dbname))
 
 # Filter out FSTs with less than minarcs and more than maxarcs
 narcs = map(x->parse(Int,split(split(x,"-")[2],"_")[2]),file)
-file = file[minarcs.>12 .&& narcs.<maxarcs]
+file = file[narcs.>minarcs .&& narcs.<maxarcs]
 files = joinpath.(root, file)
 
 products = vec(collect(product(files, files)))
@@ -62,13 +62,16 @@ Threads.@threads for i in ProgressBar(1:total_composition)
         narcs = 0
     end
 
+    if nstates>0
+        OF.write(C, outputname)
+    end
+
     lock(lk) do
         if nstates>0
-            OF.write(C, outputname)
             push!(results, (fileA=f1, fileB=f2, fileC=outputname,  nstates=nstates, narcs=narcs) )
         else
             push!(results, (fileA=f1, fileB=f2, fileC="",  nstates=nstates, narcs=narcs) )
         end    
-        CSV.write("data/$(dbname_composed).csv", DataFrame(results))
+        CSV.write("$(dbname_composed).csv", DataFrame(results))
     end    
 end

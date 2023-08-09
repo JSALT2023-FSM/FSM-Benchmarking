@@ -3,13 +3,36 @@ Creates a folder with random FSTs and a CSV file with the metadata of the FSTs.
 Variants are semiring, using epsilon, acceptor or not, and weighted or not.
 """
 
-dbname = "fsadb_acyclic_tropical"
+dbname = "fsadb_big_acyclic_tropical_3"
 semiring = "tropical"
 acceptor = true
 unweighted = false
 label_offset = 2 # 1 for epsilon
-total_fsts  = 1000
+total_fsts  = 20
 acyclic = true
+method = "loop"
+collapsed = true
+
+_nsyms = [32]
+_narcs_density = [0.001,0.01,0.05]
+_nstates = [10000,1000]
+_seed = 1:2
+
+# dbname = "fsadb_acyclic_tropical"
+# semiring = "tropical"
+# acceptor = true
+# unweighted = false
+# label_offset = 2 # 1 for epsilon
+# total_fsts  = 1000
+# acyclic = true
+
+# dbname = "fsadb_cyclic_tropical"
+# semiring = "tropical"
+# acceptor = true
+# unweighted = false
+# label_offset = 2 # 1 for epsilon
+# total_fsts  = 1000
+# acyclic = false
 
 # semiring = "tropical"
 # acceptor = true
@@ -18,6 +41,15 @@ acyclic = true
 # label_offset = 2 # 1 for epsilon
 # total_fsts  = 1000
 # acyclic = false
+
+# semiring = "tropical"
+# acceptor = false
+# unweighted = false
+# dbname = "fstdb_tropical_2"
+# label_offset = 2 # 1 for epsilon
+# total_fsts  = 1000
+# acyclic = false
+# method = "loop"
 
 using DataFrames
 import IterTools.product
@@ -109,53 +141,77 @@ end
 
 lk = ReentrantLock()
 
+# _nsyms = [32,128,512]
+# # _nsyms = [128]
+# _nstates = [32, 128, 512, 2048]
+# # _nstates = [50000]
+
 records = []
-Threads.@threads for i in ProgressBar(1:total_fsts)
-    nsyms = 2 .^rand(1:8)
-    nstates = 2 .^rand(3:8)
-    if nstates <= 8 && nsyms <= 8
-        _narcs_density = rand(0.1:0.05:1.0)
-    else
-        _narcs_density = rand(0.1:0.05:0.5)
-    end
-    seed = rand(1000:5000)
-    if acyclic
-        narcs = floor(Int, _narcs_density*(nsyms-1)*nstates*(nstates-1)/2)
-    else
-        narcs = floor(Int, _narcs_density*(nsyms-1)*nstates^2)
-    end
 
-    rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor)    
-    A = OF.VectorFst(rA)
-    num = i
-    filename = "data/$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
-    lock(lk) do
-        OF.write(A, filename)
-        push!(records, (filename=filename,nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
-    end 
-end
+# Threads.@threads for i in ProgressBar(1:total_fsts)
+#     nsyms = rand(_nsyms)
+#     nstates = rand(_nstates)
+#     if nstates <= 8 && nsyms <= 8
+#         _narcs_density = rand(0.1:0.05:1.0)
+#     else
+#         _narcs_density = rand(0.1:0.05:0.5)
+#     end
+#     seed = rand(1000:5000)
+#     if acyclic
+#         narcs = floor(Int, _narcs_density*(nsyms-1)*nstates*(nstates-1)/2)
+#     else
+#         narcs = floor(Int, _narcs_density*(nsyms-1)*nstates^2)
+#     end
 
-_nsyms = [8,32,128,512]
-_narcs_density = [0.1,0.2,0.5]
-_nstates = [8,16,32,64,128]
-_seed = 1:15
+#     rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor)    
+#     A = OF.VectorFst(rA)
+#     num = i
+#     filename = "data/$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
+#     lock(lk) do
+#         OF.write(A, filename)
+#         push!(records, (filename=filename,nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
+#     end 
+# end
 
-products = vec(collect(product(_nstates, _narcs_density, _nsyms, _seed)))
+
+
+products = shuffle(vec(collect(product(_seed, _narcs_density, _nsyms, _nstates))))
+
+println("Generating $(length(products)) FSTs")
 
 Threads.@threads for i in ProgressBar(1:length(products))
-    (nstates, _narcs_density, nsyms, seed) = products[i]
+    (seed, _narcs_density, nsyms, nstates) = products[i]
     if acyclic
-        narcs = floor(Int, _narcs_density*(nsyms-1)*nstates*(nstates-1)/2)
+        if collapsed
+            narcs = floor(Int, _narcs_density*nstates*(nstates-1)/2)
+        else
+            narcs = floor(Int, _narcs_density*(nsyms-1)*nstates*(nstates-1)/2)
+        end
     else
-        narcs = floor(Int, _narcs_density*(nsyms-1)*nstates^2)
+        if collapsed
+            narcs = floor(Int, _narcs_density*nstates^2)
+        else
+            narcs = floor(Int, _narcs_density*(nsyms-1)*nstates^2)
+        end
     end
 
-    rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor)
-    A = OF.VectorFst(rA)
+
     num = i + total_fsts
     filename = "data/$(dbname)/$(lpad(num,4,"0"))_Q_$(nstates)-E_$(narcs)-A_$(nsyms)-seed_$(seed).fst"
+
+    # Check file does not exist
+    if isfile(filename)
+        continue
+    end
+
+    # print("Creating random fst")
+    rA = random_vectorfst(S, nstates, nsyms, narcs; unweigthed=unweighted, acyclic=acyclic, seed=seed, label_offset=label_offset, acceptor=acceptor, method=method)
+    # print("Converting to OpenFst")
+    A = OF.VectorFst(rA)
+    
+    OF.write(A, filename)
+
     lock(lk) do
-        OF.write(A, filename)
         push!(records, (filename=filename, nstates=nstates, narcs=narcs, nsyms=nsyms, seed=seed) )
     end
 end
